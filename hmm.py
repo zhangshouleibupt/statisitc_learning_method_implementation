@@ -43,17 +43,46 @@ class HMM():
         T = len(label_seqs)
         last_alpha,tmp_alpha = [],[]
         start = label_seqs_idxs[0]
-        last_alpha = [pi[i] * self.B[i][start] for i in range(self.N)]
+        last_alpha = [self.pi[i] * self.B[i][start] for i in range(self.N)]
         for t in range(1,T):
             label = label_seqs_idxs[t]
             tmp_alpha = [sum([last_alpha[j]*self.A[j][i]*self.B[i][label] for j in range(self.N)])
                           for i in range(self.N)]
             last_alpha = tmp_alpha
         return sum(tmp_alpha)
+    def viterbi(self,label_seqs):
+        label_seqs_idxs = [self.label_to_idx.get(label,label_to_idx['unk']) for label in label_seqs]
+        T = len(label_seqs)
+        last_alpha,tmp_alpha = [],[]
+        start = label_seqs_idxs[0]
+        last_alpha = [self.pi[i] * self.B[i][start] for i in range(self.N)]
+        parent_state = [[] for j in range(T)]
+        for t in range(1,T):
+            label = label_seqs_idxs[t]
+            tmp_alpha = [max([last_alpha[j] * self.A[j][i] * self.B[i][label] for j in range(self.N)])
+                         for i in range(self.N)]
+            parent_state[t] = [self.argmax([last_alpha[j] * self.A[j][i] for j in range(self.N)])
+                         for i in range(self.N)]
+            last_alpha = tmp_alpha
+        ans = []
+        parent = self.argmax(tmp_alpha)
+        ans.append(parent)
+        for t in range(T-1,0,-1):
+            parent = parent_state[t][parent]
+            ans.append(parent)
+        return max(tmp_alpha),list(reversed(ans))
 
+    def argmax(self,vector):
+        max_item,max_idx = vector[0],0
+        for i,item in enumerate(vector):
+            if max_item < item:
+                max_idx,max_item = i,item
+        return max_idx
 def main():
     hmm = HMM(A,B,pi,state_to_idx,idx_to_state,label_to_idx,idx_to_label)
     label_seqs = "红,白,红".split(",")
-    print("%.5f"%hmm.forward_alpha(label_seqs))
+    #print("%.5f"%hmm.forward_alpha(label_seqs))
+    best_path_pro,path = hmm.viterbi(label_seqs)
+    print(path)
 if __name__ == "__main__":
     main()
